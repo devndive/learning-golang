@@ -15,7 +15,11 @@ jobs:
           go-version: 1.21
 
       - name: Build
-        run: go build -v ./...
+        run: 
+          cd structure-and-tests
+          go build -v ./...
 
       - name: Test and coverage
-        run: go test -coverage ./...
+        run: 
+          cd structure-and-tests
+          go test -coverage ./...
