@@ -1,74 +1,73 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"log"
-	"os"
 	"database/sql"
 	"encoding/json"
+	"log"
+	"net/http"
+	"os"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/lucsky/cuid"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Contest struct {
-	Title string
+	Title       string
 	Description string
-	Link string
-	Date string
+	Link        string
+	Date        string
 }
 
 func InitializeContests() []Contest {
 	contests := []Contest{
-        {
-            Date:        "08.06.24",
-            Title:       "Steinhuder Meer",
-            Description: "Fun (nur 5km Laufen)",
-            Link:        "https://www.steinhudermeer-triathlon.de/",
-        },
-        {
-            Date:        "16.06.24",
-            Title:       "Düsseldorf",
-            Description: "SD/OD",
-            Link:        "https://events.larasch.de/en/t3-triathlon-duesseldorf",
-        },
-        {
-            Date:        "30.06.24",
-            Title:       "Bochum",
-            Description: "SD",
-            Link:        "https://www.bochum-triathlon.de/",
-        },
-        {
-            Date:        "13.07.24",
-            Title:       "Hamburg",
-            Description: "SD",
-            Link:        "https://hamburg.triathlon.org/",
-        },
-        {
-            Date:        "28.07.24",
-            Title:       "Frankfurt",
-            Description: "OD",
-            Link:        "https://www.frankfurt-city-triathlon.de/",
-        },
-        {
-            Date:        "01.09.24",
-            Title:       "Duisburg",
-            Description: "MD",
-            Link:        "https://www.ironman.com/im703-duisburg-register",
-        },
-        {
-            Date:        "08.09.24",
-            Title:       "Köln",
-            Description: "OD",
-            Link:        "https://www.carglass-koeln-triathlon.de/",
-        },
-        {
-            Date:        "06.10.24",
-            Title:       "Köln",
-            Description: "Marathon",
-            Link:        "https://generali-koeln-marathon.de/",
-	},
+		{
+			Date:        "08.06.24",
+			Title:       "Steinhuder Meer",
+			Description: "Fun (nur 5km Laufen)",
+			Link:        "https://www.steinhudermeer-triathlon.de/",
+		},
+		{
+			Date:        "16.06.24",
+			Title:       "Düsseldorf",
+			Description: "SD/OD",
+			Link:        "https://events.larasch.de/en/t3-triathlon-duesseldorf",
+		},
+		{
+			Date:        "30.06.24",
+			Title:       "Bochum",
+			Description: "SD",
+			Link:        "https://www.bochum-triathlon.de/",
+		},
+		{
+			Date:        "13.07.24",
+			Title:       "Hamburg",
+			Description: "SD",
+			Link:        "https://hamburg.triathlon.org/",
+		},
+		{
+			Date:        "28.07.24",
+			Title:       "Frankfurt",
+			Description: "OD",
+			Link:        "https://www.frankfurt-city-triathlon.de/",
+		},
+		{
+			Date:        "01.09.24",
+			Title:       "Duisburg",
+			Description: "MD",
+			Link:        "https://www.ironman.com/im703-duisburg-register",
+		},
+		{
+			Date:        "08.09.24",
+			Title:       "Köln",
+			Description: "OD",
+			Link:        "https://www.carglass-koeln-triathlon.de/",
+		},
+		{
+			Date:        "06.10.24",
+			Title:       "Köln",
+			Description: "Marathon",
+			Link:        "https://generali-koeln-marathon.de/",
+		},
 	}
 
 	return contests
@@ -112,10 +111,10 @@ func initializeDatabase() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} 
+	}
 }
 
-func loaddata() ([]Contest, error) {
+func loaddata() (map[string]Contest, error) {
 	db, err := sql.Open("sqlite3", "./contests.sqlite3")
 	if err != nil {
 		log.Fatal(err)
@@ -129,7 +128,7 @@ func loaddata() ([]Contest, error) {
 
 	defer rows.Close()
 
-	var all []Contest
+	all := make(map[string]Contest)
 	for rows.Next() {
 
 		var id string
@@ -139,14 +138,14 @@ func loaddata() ([]Contest, error) {
 			log.Fatal(err)
 		}
 
-		all = append(all, contest)
+		all[id] = contest
 	}
 
 	return all, nil
 }
 
 func main() {
-	initializeDatabase()
+	// initializeDatabase()
 	mux := http.NewServeMux()
 
 	contests, err := loaddata()
@@ -161,7 +160,14 @@ func main() {
 
 	mux.HandleFunc("GET /api/v1/contest/{id}/", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		fmt.Fprint(w, "handling task with id=%v\n", id)
+
+		contest, isPresent := contests[id]
+		if isPresent {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(contest)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
 	})
 
 	server := &http.Server{
